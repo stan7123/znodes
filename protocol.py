@@ -25,15 +25,15 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Bitcoin protocol access for Bitnodes.
-Reference: https://en.bitcoin.it/wiki/Protocol_specification
+Zcash protocol access for Znodes.
+Reference: https://github.com/zcash/zips/blob/master/protocol/protocol.pdf
 
 -------------------------------------------------------------------------------
-                     PACKET STRUCTURE FOR BITCOIN PROTOCOL
-                           protocol version >= 70001
+                     PACKET STRUCTURE FOR ZCASH PROTOCOL
+                           protocol version >= 170002
 -------------------------------------------------------------------------------
 [---MESSAGE---]
-[ 4] MAGIC_NUMBER               (\xF9\xBE\xB4\xD9)                  uint32_t
+[ 4] MAGIC_NUMBER               (\x24\xE9\x27\x64)                  uint32_t
 [12] COMMAND                                                        char[12]
 [ 4] LENGTH                     <I (len(payload))                   uint32_t
 [ 4] CHECKSUM                   (sha256(sha256(payload))[:4])       uint32_t
@@ -152,18 +152,18 @@ from operator import itemgetter
 MAINNET = "mainnet"
 TESTNET3 = "testnet3"
 
-MAINNET_MAGIC_NUMBER = "\xF9\xBE\xB4\xD9"
+MAINNET_MAGIC_NUMBER = "\x24\xE9\x27\x64"
 TESTNET3_MAGIC_NUMBER = "\x0B\x11\x09\x07"
 
-MAINNET_DEFAULT_PORT = 8333
-TESTNET3_DEFAULT_PORT = 18333
+MAINNET_DEFAULT_PORT = 8233
+TESTNET3_DEFAULT_PORT = 18233
 
-MIN_PROTOCOL_VERSION = 70001
-PROTOCOL_VERSION = 70002
+MIN_PROTOCOL_VERSION = 170002
+PROTOCOL_VERSION = 170002
 FROM_SERVICES = 0
 TO_SERVICES = 1  # NODE_NETWORK
-USER_AGENT = "/bitnodes.21.co:0.1/"
-HEIGHT = 420000
+USER_AGENT = "/znode:0.1/"
+HEIGHT = 52000
 RELAY = 0  # set to 1 to receive all txs
 
 SOCKET_BUFSIZE = 8192

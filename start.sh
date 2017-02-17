@@ -21,4 +21,4 @@ python -u pcap.py pcap.conf > pcap.1.out 2>&1 &
 python -u pcap.py pcap.conf > pcap.2.out 2>&1 &
 
 # --- testnet3 ---
-python -u crawl.py crawl.testnet3.conf master > crawl.testnet3.master.out 2>&1 &
+#python -u crawl.py crawl.testnet3.conf master > crawl.testnet3.master.out 2>&1 &
