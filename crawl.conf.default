@@ -9,12 +9,12 @@ network = mainnet
 # List of DNS seeders to get a subset of reachable nodes
 # --- mainnet ---
 seeders =
-    dnsseed.z.cash
-    dnsseed.str4d.xyz
-    dnsseed.znodes.org
+    mainnet.zensystem.io
+    node1.zenchain.info
+    dnsseed.zenseed.network
 # --- testnet3 ---
-#seeders =
-#    dnsseed.testnet.z.cash
+seeders =
+    node.scottrockcafe.com
 
 
 # Number of concurrent workers (greenlets)
