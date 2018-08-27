@@ -144,6 +144,7 @@ import socks
 import struct
 import sys
 import time
+import ssl
 from base64 import b32decode, b32encode
 from binascii import hexlify, unhexlify
 from cStringIO import StringIO
@@ -162,12 +163,13 @@ MIN_PROTOCOL_VERSION = 170002
 PROTOCOL_VERSION = 170002
 FROM_SERVICES = 0
 TO_SERVICES = 1  # NODE_NETWORK
-USER_AGENT = "/znode:0.1/"
+USER_AGENT = "/znode:0.2-test/"
 HEIGHT = 52000
 RELAY = 0  # set to 1 to receive all txs
 
 SOCKET_BUFSIZE = 8192
 SOCKET_TIMEOUT = 30
+NON_SSL_PERMITTED = True
 HEADER_LEN = 24
 
 ONION_PREFIX = "\xFD\x87\xD8\x7E\xEB\x43"  # ipv6 prefix for .onion address
@@ -210,6 +212,10 @@ class ProxyRequired(ConnectionError):
 
 
 class RemoteHostClosedConnection(ConnectionError):
+    pass
+
+
+class NonSSLConnectionNotPermitted(ConnectionError):
     pass
 
 
@@ -754,14 +760,45 @@ class Connection(object):
         self.from_addr = from_addr
         self.serializer = Serializer(**config)
         self.socket_timeout = config.get('socket_timeout', SOCKET_TIMEOUT)
+        self.non_ssl_permitted = config.get('non_ssl_permitted',
+                                            NON_SSL_PERMITTED)
         self.proxy = config.get('proxy', None)
         self.socket = None
+        self.ssl_context = None
 
     def open(self):
+        if not self.ssl_context:
+            self.create_ssl_context()
+
+        try:
+            sock = create_connection(self.to_addr,
+                                     timeout=self.socket_timeout,
+                                     source_address=self.from_addr,
+                                     proxy=self.proxy)
+            self.socket = self.ssl_context.wrap_socket(sock)
+        except ssl.SSLError as e:
+            # Fallback to standard connection if permitted
+            if 'certificate_verify_failed' in e.reason.lower():
+                if self.non_ssl_permitted:
+                    self.open_non_ssl()
+                else:
+                    raise NonSSLConnectionNotPermitted(
+                        'Cannot connect with SSL. Non-SSL connections off.')
+            else:
+                raise
+
+    def open_non_ssl(self):
         self.socket = create_connection(self.to_addr,
                                         timeout=self.socket_timeout,
                                         source_address=self.from_addr,
                                         proxy=self.proxy)
+
+    def create_ssl_context(self):
+        self.ssl_context = ssl.create_default_context()
+        self.ssl_context.check_hostname = False
+
+    def is_ssl(self):
+        return isinstance(self.socket, ssl.SSLSocket)
 
     def close(self):
         if self.socket:
@@ -933,7 +970,10 @@ class Connection(object):
 
 
 def main():
-    to_addr = ("136.243.139.96", MAINNET_DEFAULT_PORT)
+    # ssl node
+    to_addr = ("77.55.221.71", MAINNET_DEFAULT_PORT)
+    # non ssl node
+    # to_addr = ("77.55.209.234", MAINNET_DEFAULT_PORT)
     to_services = TO_SERVICES
 
     handshake_msgs = []
@@ -944,6 +984,8 @@ def main():
         print("open")
         conn.open()
 
+        print('connection type: {}'.format('ssl' if conn.is_ssl() else 'non-ssl'))
+
         print("handshake")
         handshake_msgs = conn.handshake()
 
@@ -951,7 +993,7 @@ def main():
         addr_msgs = conn.getaddr()
 
     except (ProtocolError, ConnectionError, socket.error) as err:
-        print("{}: {}".format(err, to_addr))
+        print("{}: {}, type: {}".format(err, to_addr, type(err)))
 
     print("close")
     conn.close()
