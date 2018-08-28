@@ -419,6 +419,8 @@ def init_settings(argv):
     SETTINGS['ipv6_prefix'] = conf.getint('crawl', 'ipv6_prefix')
     SETTINGS['nodes_per_ipv6_prefix'] = conf.getint('crawl',
                                                     'nodes_per_ipv6_prefix')
+    SETTINGS['non_tls_connections'] = conf.getboolean('crawl',
+                                                      'non_tls_connections')
 
     SETTINGS['exclude_ipv4_networks'] = list_excluded_networks(
         conf.get('crawl', 'exclude_ipv4_networks'))

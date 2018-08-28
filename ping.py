@@ -398,6 +398,8 @@ def init_settings(argv):
     SETTINGS['ipv6_prefix'] = conf.getint('ping', 'ipv6_prefix')
     SETTINGS['nodes_per_ipv6_prefix'] = conf.getint('ping',
                                                     'nodes_per_ipv6_prefix')
+    SETTINGS['non_tls_connections'] = conf.getboolean('crawl',
+                                                      'non_tls_connections')
 
     SETTINGS['onion'] = conf.getboolean('ping', 'onion')
     SETTINGS['tor_proxy'] = None
