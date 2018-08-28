@@ -135,7 +135,8 @@ def connect(redis_conn, key):
                       from_services=SETTINGS['services'],
                       user_agent=SETTINGS['user_agent'],
                       height=height,
-                      relay=SETTINGS['relay'])
+                      relay=SETTINGS['relay'],
+                      non_tls_connections=SETTINGS['non_tls_connections'])
     try:
         logging.debug("Connecting to %s", conn.to_addr)
         conn.open()

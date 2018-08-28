@@ -168,8 +168,8 @@ HEIGHT = 52000
 RELAY = 0  # set to 1 to receive all txs
 
 SOCKET_BUFSIZE = 8192
-SOCKET_TIMEOUT = 30
-NON_SSL_PERMITTED = False
+SOCKET_TIMEOUT = 60
+NON_TLS_CONNECTIONS = True
 HEADER_LEN = 24
 
 ONION_PREFIX = "\xFD\x87\xD8\x7E\xEB\x43"  # ipv6 prefix for .onion address
@@ -215,7 +215,7 @@ class RemoteHostClosedConnection(ConnectionError):
     pass
 
 
-class NonSSLConnectionNotPermitted(ConnectionError):
+class NonTLSConnectionNotPermitted(ConnectionError):
     pass
 
 
@@ -760,8 +760,8 @@ class Connection(object):
         self.from_addr = from_addr
         self.serializer = Serializer(**config)
         self.socket_timeout = config.get('socket_timeout', SOCKET_TIMEOUT)
-        self.non_ssl_permitted = config.get('non_ssl_permitted',
-                                            NON_SSL_PERMITTED)
+        self.non_tls_connections = config.get('non_tls_connections',
+                                              NON_TLS_CONNECTIONS)
         self.proxy = config.get('proxy', None)
         self.socket = None
         self.ssl_context = None
@@ -777,13 +777,13 @@ class Connection(object):
                                      proxy=self.proxy)
             self.socket = self.ssl_context.wrap_socket(sock)
         except ssl.SSLError as e:
-            # Fallback to standard connection if permitted
+            # Fallback to ordinary connection if permitted
             if 'certificate_verify_failed' in e.reason.lower():
-                if self.non_ssl_permitted:
+                if self.non_tls_connections:
                     self.open_non_ssl()
                 else:
-                    raise NonSSLConnectionNotPermitted(
-                        'Cannot connect with SSL. Non-SSL connections off.')
+                    raise NonTLSConnectionNotPermitted(
+                        'Cannot connect using TLS. Non-TLS connections off.')
             else:
                 raise
 
@@ -795,7 +795,7 @@ class Connection(object):
 
     def create_ssl_context(self):
         self.ssl_context = ssl.create_default_context()
-	#self.ssl_context.load_cert_chain(certfile_pem_without_passphrase)
+        self.ssl_context.load_cert_chain('cert/cert.pem', keyfile='cert/key_nophrase.pem')
         self.ssl_context.check_hostname = False
 
     def is_ssl(self):

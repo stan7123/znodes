@@ -111,3 +111,6 @@ include_checked = False
 crawl_dir = data/crawl/mainnet
 # --- testnet3 ---
 #crawl_dir = data/crawl/testnet3
+
+#Attempt to establish standard connection when TLS fails
+non_tls_connections = True

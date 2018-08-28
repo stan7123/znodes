@@ -114,7 +114,8 @@ class Keepalive(object):
             except socket.timeout:
                 pass
             except (ProtocolError, ConnectionError, socket.error) as err:
-                logging.info("get_messages: Closing %s (%s)", self.node, err)
+                logging.info("get_messages: Closing %s TLS: %s (%s)", self.node,
+                             self.conn.is_ssl(), err)
                 break
             gevent.sleep(0.3)
 
@@ -219,6 +220,7 @@ def task():
         proxy = SETTINGS['tor_proxy']
 
     handshake_msgs = []
+    # TODO: save is_ssl info about node in redis
     conn = Connection(node, (SETTINGS['source_address'], 0),
                       socket_timeout=SETTINGS['socket_timeout'],
                       proxy=proxy,
@@ -227,7 +229,8 @@ def task():
                       from_services=SETTINGS['services'],
                       user_agent=SETTINGS['user_agent'],
                       height=height,
-                      relay=SETTINGS['relay'])
+                      relay=SETTINGS['relay'],
+                      non_tls_connections=SETTINGS['non_tls_connections'])
     try:
         logging.debug("Connecting to %s", conn.to_addr)
         conn.open()
