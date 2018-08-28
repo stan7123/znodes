@@ -169,7 +169,7 @@ RELAY = 0  # set to 1 to receive all txs
 
 SOCKET_BUFSIZE = 8192
 SOCKET_TIMEOUT = 30
-NON_SSL_PERMITTED = True
+NON_SSL_PERMITTED = False
 HEADER_LEN = 24
 
 ONION_PREFIX = "\xFD\x87\xD8\x7E\xEB\x43"  # ipv6 prefix for .onion address
@@ -795,6 +795,7 @@ class Connection(object):
 
     def create_ssl_context(self):
         self.ssl_context = ssl.create_default_context()
+	#self.ssl_context.load_cert_chain(certfile_pem_without_passphrase)
         self.ssl_context.check_hostname = False
 
     def is_ssl(self):
