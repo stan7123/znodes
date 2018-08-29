@@ -778,7 +778,8 @@ class Connection(object):
             self.socket = self.ssl_context.wrap_socket(sock)
         except ssl.SSLError as e:
             # Fallback to ordinary connection if permitted
-            if 'certificate_verify_failed' in e.reason.lower():
+            print(repr(e).lower())
+            if 'certificate_verify_failed' in repr(e).lower():
                 if self.non_tls_connections:
                     self.open_non_ssl()
                 else:
@@ -974,7 +975,7 @@ def main():
     # ssl node
     to_addr = ("77.55.221.71", MAINNET_DEFAULT_PORT)
     # non ssl node
-    # to_addr = ("77.55.209.234", MAINNET_DEFAULT_PORT)
+    #to_addr = ("77.55.209.234", MAINNET_DEFAULT_PORT)
     to_services = TO_SERVICES
 
     handshake_msgs = []

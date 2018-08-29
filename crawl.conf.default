@@ -45,7 +45,7 @@ services = 0
 relay = 0
 
 # Socket timeout
-socket_timeout = 30
+socket_timeout = 90
 
 # Run cron tasks every given interval
 cron_delay = 10

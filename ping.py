@@ -43,6 +43,7 @@ import redis.connection
 import socket
 import sys
 import time
+import ssl
 from ConfigParser import ConfigParser
 
 from protocol import ProtocolError, ConnectionError, Connection
@@ -113,9 +114,15 @@ class Keepalive(object):
                 self.conn.get_messages()
             except socket.timeout:
                 pass
+            except ssl.SSLError as e:
+                if 'timed out' in repr(e):
+                    pass
+                else:
+                    logging.info("get_messages: Closing %s TLS: %s (%s), exc: %s", self.node, self.conn.is_ssl(), err, type(err))
+                    break
             except (ProtocolError, ConnectionError, socket.error) as err:
-                logging.info("get_messages: Closing %s TLS: %s (%s)", self.node,
-                             self.conn.is_ssl(), err)
+                logging.info("get_messages: Closing %s TLS: %s (%s), exc: %s", self.node,
+                             self.conn.is_ssl(), err, type(err))
                 break
             gevent.sleep(0.3)
 
@@ -398,7 +405,7 @@ def init_settings(argv):
     SETTINGS['ipv6_prefix'] = conf.getint('ping', 'ipv6_prefix')
     SETTINGS['nodes_per_ipv6_prefix'] = conf.getint('ping',
                                                     'nodes_per_ipv6_prefix')
-    SETTINGS['non_tls_connections'] = conf.getboolean('crawl',
+    SETTINGS['non_tls_connections'] = conf.getboolean('ping',
                                                       'non_tls_connections')
 
     SETTINGS['onion'] = conf.getboolean('ping', 'onion')
