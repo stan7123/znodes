@@ -165,15 +165,18 @@ def connect(redis_conn, key):
         redis_pipe.hset(key, 'state', "up")
     redis_pipe.execute()
 
-
 def dump(timestamp, nodes):
     """
     Dumps data for reachable nodes into timestamp-prefixed JSON file and
     returns most common height from the nodes.
     """
     json_data = []
-
+    logging.info('len nodes: {}'.format(len(nodes)))
+    it = 0
     for node in nodes:
+        it += 1
+        if it % 100 == 0:
+            logging.info('Got {} nodes info'.format(i))
         (address, port, services) = node[5:].split("-", 2)
         height_key = "height:{}-{}-{}".format(address, port, services)
         try:
@@ -182,13 +185,14 @@ def dump(timestamp, nodes):
             logging.warning("%s missing", height_key)
             height = 0
         json_data.append([address, int(port), int(services), height])
-
+    logging.info('after for data: {}'.format(len(json_data)))
     if len(json_data) == 0:
-        logging.warning("len(json_data): %d", len(json_data))
+        logging.info("len(json_data): %d", len(json_data))
         return 0
 
     json_output = os.path.join(SETTINGS['crawl_dir'],
                                "{}.json".format(timestamp))
+    logging.info('before open')
     open(json_output, 'w').write(json.dumps(json_data))
     logging.info("Wrote %s", json_output)
 
@@ -233,8 +237,9 @@ def restart(timestamp):
     reachable_nodes = len(nodes)
     logging.info("Reachable nodes: %d", reachable_nodes)
     REDIS_CONN.lpush('nodes', (timestamp, reachable_nodes))
-
+    logging.info('before dump')
     height = dump(timestamp, nodes)
+    logging.info('after dump')
     REDIS_CONN.set('height', height)
     logging.info("Height: %d", height)
 
@@ -293,6 +298,7 @@ def task():
 
         key = "node:{}-{}-{}".format(node[0], node[1], node[2])
         if redis_conn.exists(key):
+            logging.debug('key %s exists')
             continue
 
         # Check if prefix has hit its limit
