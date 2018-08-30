@@ -3,8 +3,8 @@
 nohup python -u crawl.py crawl.mainnet.conf master > crawl.mainnet.master.out 2>&1 &
 nohup python -u crawl.py crawl.mainnet.conf slave > crawl.mainnet.slave.1.out 2>&1 &
 nohup python -u crawl.py crawl.mainnet.conf slave > crawl.mainnet.slave.2.out 2>&1 &
-nohup python -u crawl.py crawl.mainnet.conf slave > crawl.mainnet.slave.3.out 2>&1 &
-nohup python -u crawl.py crawl.mainnet.conf slave > crawl.mainnet.slave.4.out 2>&1 &
+#nohup python -u crawl.py crawl.mainnet.conf slave > crawl.mainnet.slave.3.out 2>&1 &
+#nohup python -u crawl.py crawl.mainnet.conf slave > crawl.mainnet.slave.4.out 2>&1 &
 
 #every process creates configurable number of worker threads that keep connections to nodes
 nohup python -u ping.py ping.conf master > ping.master.out 2>&1 &

@@ -175,11 +175,7 @@ def dump(timestamp, nodes):
     returns most common height from the nodes.
     """
     json_data = []
-    it = 0
     for node in nodes:
-        it += 1
-        if it % 1000 == 0:
-            logging.info('Prepared %d nodes info', it)
         (address, port, services) = node[5:].split("-", 2)
         height_key = "height:{}-{}-{}".format(address, port, services)
         try:
