@@ -135,14 +135,18 @@ def connect(redis_conn, key):
                       from_services=SETTINGS['services'],
                       user_agent=SETTINGS['user_agent'],
                       height=height,
-                      relay=SETTINGS['relay'])
+                      relay=SETTINGS['relay'],
+                      non_tls_connections=SETTINGS['non_tls_connections'],
+                      cert_path=SETTINGS['cert_path'],
+                      key_path=SETTINGS['key_path'],
+                      key_pass=SETTINGS['key_pass'])
     try:
         logging.debug("Connecting to %s", conn.to_addr)
         conn.open()
         handshake_msgs = conn.handshake()
         addr_msgs = conn.getaddr()
     except (ProtocolError, ConnectionError, socket.error) as err:
-        logging.debug("%s: %s", conn.to_addr, err)
+        logging.debug("%s: %s", conn.to_addr, repr(err))
     finally:
         conn.close()
 
@@ -171,7 +175,6 @@ def dump(timestamp, nodes):
     returns most common height from the nodes.
     """
     json_data = []
-
     for node in nodes:
         (address, port, services) = node[5:].split("-", 2)
         height_key = "height:{}-{}-{}".format(address, port, services)
@@ -183,11 +186,12 @@ def dump(timestamp, nodes):
         json_data.append([address, int(port), int(services), height])
 
     if len(json_data) == 0:
-        logging.warning("len(json_data): %d", len(json_data))
+        logging.info("len(json_data): %d", len(json_data))
         return 0
 
     json_output = os.path.join(SETTINGS['crawl_dir'],
                                "{}.json".format(timestamp))
+
     open(json_output, 'w').write(json.dumps(json_data))
     logging.info("Wrote %s", json_output)
 
@@ -275,9 +279,8 @@ def task():
     redis_conn = new_redis_conn(network=SETTINGS['network'])
 
     while True:
-        if not SETTINGS['master']:
-            while REDIS_CONN.get('crawl:master:state') != "running":
-                gevent.sleep(SETTINGS['socket_timeout'])
+        while REDIS_CONN.get('crawl:master:state') != "running":
+            gevent.sleep(SETTINGS['socket_timeout'])
 
         node = redis_conn.spop('pending')  # Pop random node from set
         if node is None:
@@ -418,6 +421,11 @@ def init_settings(argv):
     SETTINGS['ipv6_prefix'] = conf.getint('crawl', 'ipv6_prefix')
     SETTINGS['nodes_per_ipv6_prefix'] = conf.getint('crawl',
                                                     'nodes_per_ipv6_prefix')
+    SETTINGS['non_tls_connections'] = conf.getboolean('crawl',
+                                                      'non_tls_connections')
+    SETTINGS['cert_path'] = conf.get('crawl', 'cert_path')
+    SETTINGS['key_path'] = conf.get('crawl', 'key_path')
+    SETTINGS['key_pass'] = conf.get('crawl', 'key_pass')
 
     SETTINGS['exclude_ipv4_networks'] = list_excluded_networks(
         conf.get('crawl', 'exclude_ipv4_networks'))
@@ -485,6 +493,7 @@ def main(argv):
         redis_pipe.execute()
         set_pending()
         update_excluded_networks()
+        REDIS_CONN.set('crawl:master:state', "running")
 
     # Spawn workers (greenlets) including one worker reserved for cron tasks
     workers = []

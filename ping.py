@@ -43,6 +43,7 @@ import redis.connection
 import socket
 import sys
 import time
+import ssl
 from ConfigParser import ConfigParser
 
 from protocol import ProtocolError, ConnectionError, Connection
@@ -113,8 +114,16 @@ class Keepalive(object):
                 self.conn.get_messages()
             except socket.timeout:
                 pass
+            except ssl.SSLError as e:
+                if 'timed out' in repr(e):
+                    pass
+                else:
+                    logging.info("get_messages: Closing %s TLS: %s (%s)",
+                                 self.node, self.conn.is_ssl(), repr(e))
+                    break
             except (ProtocolError, ConnectionError, socket.error) as err:
-                logging.info("get_messages: Closing %s (%s)", self.node, err)
+                logging.info("get_messages: Closing %s TLS: %s (%s)", self.node,
+                             self.conn.is_ssl(), repr(err))
                 break
             gevent.sleep(0.3)
 
@@ -227,7 +236,11 @@ def task():
                       from_services=SETTINGS['services'],
                       user_agent=SETTINGS['user_agent'],
                       height=height,
-                      relay=SETTINGS['relay'])
+                      relay=SETTINGS['relay'],
+                      non_tls_connections=SETTINGS['non_tls_connections'],
+                      cert_path=SETTINGS['cert_path'],
+                      key_path=SETTINGS['key_path'],
+                      key_pass=SETTINGS['key_pass'])
     try:
         logging.debug("Connecting to %s", conn.to_addr)
         conn.open()
@@ -395,6 +408,11 @@ def init_settings(argv):
     SETTINGS['ipv6_prefix'] = conf.getint('ping', 'ipv6_prefix')
     SETTINGS['nodes_per_ipv6_prefix'] = conf.getint('ping',
                                                     'nodes_per_ipv6_prefix')
+    SETTINGS['non_tls_connections'] = conf.getboolean('ping',
+                                                      'non_tls_connections')
+    SETTINGS['cert_path'] = conf.get('ping', 'cert_path')
+    SETTINGS['key_path'] = conf.get('ping', 'key_path')
+    SETTINGS['key_pass'] = conf.get('ping', 'key_pass')
 
     SETTINGS['onion'] = conf.getboolean('ping', 'onion')
     SETTINGS['tor_proxy'] = None
