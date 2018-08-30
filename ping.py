@@ -118,11 +118,12 @@ class Keepalive(object):
                 if 'timed out' in repr(e):
                     pass
                 else:
-                    logging.info("get_messages: Closing %s TLS: %s (%s), exc: %s", self.node, self.conn.is_ssl(), err, type(err))
+                    logging.info("get_messages: Closing %s TLS: %s (%s)",
+                                 self.node, self.conn.is_ssl(), repr(e))
                     break
             except (ProtocolError, ConnectionError, socket.error) as err:
-                logging.info("get_messages: Closing %s TLS: %s (%s), exc: %s", self.node,
-                             self.conn.is_ssl(), err, type(err))
+                logging.info("get_messages: Closing %s TLS: %s (%s)", self.node,
+                             self.conn.is_ssl(), repr(err))
                 break
             gevent.sleep(0.3)
 
@@ -227,7 +228,6 @@ def task():
         proxy = SETTINGS['tor_proxy']
 
     handshake_msgs = []
-    # TODO: save is_ssl info about node in redis
     conn = Connection(node, (SETTINGS['source_address'], 0),
                       socket_timeout=SETTINGS['socket_timeout'],
                       proxy=proxy,
@@ -407,6 +407,9 @@ def init_settings(argv):
                                                     'nodes_per_ipv6_prefix')
     SETTINGS['non_tls_connections'] = conf.getboolean('ping',
                                                       'non_tls_connections')
+    SETTINGS['cert_path'] = conf.get('ping', 'cert_path')
+    SETTINGS['key_path'] = conf.get('ping', 'key_path')
+    SETTINGS['key_pass'] = conf.get('ping', 'key_pass')
 
     SETTINGS['onion'] = conf.getboolean('ping', 'onion')
     SETTINGS['tor_proxy'] = None

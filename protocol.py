@@ -25,7 +25,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """
-Zcash protocol access for Znodes.
+Zcash protocol access for Hnodes.
 Reference: https://github.com/zcash/zips/blob/master/protocol/protocol.pdf
 
 -------------------------------------------------------------------------------
@@ -163,16 +163,20 @@ MIN_PROTOCOL_VERSION = 170002
 PROTOCOL_VERSION = 170002
 FROM_SERVICES = 0
 TO_SERVICES = 1  # NODE_NETWORK
-USER_AGENT = "/znode:0.2-test/"
+USER_AGENT = "/hnodes:0.2/"
 HEIGHT = 52000
 RELAY = 0  # set to 1 to receive all txs
 
 SOCKET_BUFSIZE = 8192
-SOCKET_TIMEOUT = 60
-NON_TLS_CONNECTIONS = True
+SOCKET_TIMEOUT = 30
 HEADER_LEN = 24
 
 ONION_PREFIX = "\xFD\x87\xD8\x7E\xEB\x43"  # ipv6 prefix for .onion address
+
+NON_TLS_CONNECTIONS = True
+CERT_PATH = 'cert/cert.pem'
+KEY_PATH = 'cert/key.pem'
+KEY_PASS = None
 
 
 class ProtocolError(Exception):
@@ -762,6 +766,9 @@ class Connection(object):
         self.socket_timeout = config.get('socket_timeout', SOCKET_TIMEOUT)
         self.non_tls_connections = config.get('non_tls_connections',
                                               NON_TLS_CONNECTIONS)
+        self.cert_path = config.get('cert_path', CERT_PATH)
+        self.key_path = config.get('key_path', KEY_PATH)
+        self.key_pass = config.get('key_pass', KEY_PASS)
         self.proxy = config.get('proxy', None)
         self.socket = None
         self.ssl_context = None
@@ -778,7 +785,6 @@ class Connection(object):
             self.socket = self.ssl_context.wrap_socket(sock)
         except ssl.SSLError as e:
             # Fallback to ordinary connection if permitted
-            print(repr(e).lower())
             if 'certificate_verify_failed' in repr(e).lower():
                 if self.non_tls_connections:
                     self.open_non_ssl()
@@ -796,7 +802,9 @@ class Connection(object):
 
     def create_ssl_context(self):
         self.ssl_context = ssl.create_default_context()
-        self.ssl_context.load_cert_chain('cert/cert.pem', keyfile='cert/key_nophrase.pem')
+        self.ssl_context.load_cert_chain(self.cert_path,
+                                         keyfile=self.key_path,
+                                         password=self.key_pass)
         self.ssl_context.check_hostname = False
 
     def is_ssl(self):
