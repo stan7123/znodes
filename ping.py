@@ -237,7 +237,10 @@ def task():
                       user_agent=SETTINGS['user_agent'],
                       height=height,
                       relay=SETTINGS['relay'],
-                      non_tls_connections=SETTINGS['non_tls_connections'])
+                      non_tls_connections=SETTINGS['non_tls_connections'],
+                      cert_path=SETTINGS['cert_path'],
+                      key_path=SETTINGS['key_path'],
+                      key_pass=SETTINGS['key_pass'])
     try:
         logging.debug("Connecting to %s", conn.to_addr)
         conn.open()

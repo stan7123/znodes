@@ -136,7 +136,10 @@ def connect(redis_conn, key):
                       user_agent=SETTINGS['user_agent'],
                       height=height,
                       relay=SETTINGS['relay'],
-                      non_tls_connections=SETTINGS['non_tls_connections'])
+                      non_tls_connections=SETTINGS['non_tls_connections'],
+                      cert_path=SETTINGS['cert_path'],
+                      key_path=SETTINGS['key_path'],
+                      key_pass=SETTINGS['key_pass'])
     try:
         logging.debug("Connecting to %s", conn.to_addr)
         conn.open()
@@ -280,9 +283,8 @@ def task():
     redis_conn = new_redis_conn(network=SETTINGS['network'])
 
     while True:
-        if not SETTINGS['master']:
-            while REDIS_CONN.get('crawl:master:state') != "running":
-                gevent.sleep(SETTINGS['socket_timeout'])
+        while REDIS_CONN.get('crawl:master:state') != "running":
+            gevent.sleep(SETTINGS['socket_timeout'])
 
         node = redis_conn.spop('pending')  # Pop random node from set
         if node is None:
@@ -495,6 +497,7 @@ def main(argv):
         redis_pipe.execute()
         set_pending()
         update_excluded_networks()
+        REDIS_CONN.set('crawl:master:state', "running")
 
     # Spawn workers (greenlets) including one worker reserved for cron tasks
     workers = []
