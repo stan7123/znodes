@@ -25,6 +25,8 @@ nohup python -u resolve.py resolve.conf > resolve.out 2>&1 &
 
 nohup python -u export.py export.conf > export.out 2>&1 &
 
+nohup python -u api.py > api.out 2>&1 &
+
 #nohup python -u seeder.py seeder.conf > seeder.out 2>&1 &
 
 #nohup python -u pcap.py pcap.conf > pcap.1.out 2>&1 &
