@@ -101,6 +101,18 @@ def enumerate_node(redis_pipe, addr_msgs, now):
     return peers
 
 
+def update_node_peers(address, port, redis_pipe, addr_msgs):
+    """
+    Updates node map. So we can track given node's peers.
+    """
+    for addr_msg in addr_msgs:
+        if 'addr_list' in addr_msg:
+            map_key = "node-map:{}-{}".format(address, port)
+            redis_pipe.set(map_key, json.dumps(addr_msg['addr_list']))
+            return True
+    return False
+
+
 def connect(redis_conn, key):
     """
     Establishes connection with a node to:
@@ -166,6 +178,7 @@ def connect(redis_conn, key):
         peers = enumerate_node(redis_pipe, addr_msgs, now)
         logging.debug("%s Peers: %d", conn.to_addr, peers)
         redis_pipe.hset(key, 'state', "up")
+        update_node_peers(address, port, redis_pipe, addr_msgs)
     redis_pipe.execute()
 
 

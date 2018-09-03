@@ -5,3 +5,5 @@ pygeoip==0.3.2
 PySocks==1.5.7
 redis==2.10.5
 requests==2.11.0
+Flask==1.0.2
+Flask-Redis==0.3.0
