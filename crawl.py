@@ -223,7 +223,7 @@ def dump_node_map(timestamp):
         peers = json.loads(node_data_ser)
         peers_list = ['{}|{}'.format(
             max((p['ipv4'], p['ipv6'], p['onion'])), p['port']) for p in peers]
-        peers_list.insert('{}|{}'.format(address, port))
+        peers_list.insert(0, '{}|{}'.format(address, port))
         nodes.append(peers_list)
 
     map_path = os.path.join(
@@ -528,6 +528,8 @@ def main(argv):
         for key in get_keys(REDIS_CONN, 'node:*'):
             redis_pipe.delete(key)
         for key in get_keys(REDIS_CONN, 'crawl:cidr:*'):
+            redis_pipe.delete(key)
+        for key in get_keys(REDIS_CONN, 'node-map:*'):
             redis_pipe.delete(key)
         redis_pipe.delete('pending')
         redis_pipe.execute()
