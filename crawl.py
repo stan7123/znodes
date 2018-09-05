@@ -31,6 +31,7 @@ Greenlets-based Bitcoin network crawler.
 from gevent import monkey
 monkey.patch_all()
 
+import csv
 import gevent
 import json
 import logging
@@ -211,6 +212,29 @@ def dump(timestamp, nodes):
     return Counter([node[-1] for node in json_data]).most_common(1)[0][0]
 
 
+def dump_node_map(timestamp):
+    """
+    Dumps node map (node to peers).
+    """
+    nodes = []
+    for key in get_keys(REDIS_CONN, 'node-map:*'):
+        (address, port) = key[9:].split("-", 2)
+        node_data_ser = REDIS_CONN.get(key)
+        peers = json.loads(node_data_ser)
+        peers_list = ['{}|{}'.format(
+            max((p['ipv4'], p['ipv6'], p['onion'])), p['port']) for p in peers]
+        peers_list.insert('{}|{}'.format(address, port))
+        nodes.append(peers_list)
+
+    map_path = os.path.join(
+        SETTINGS['crawl_dir'], "map-{}.json".format(timestamp))
+    with open(map_path, "w") as f:
+        writer = csv.writer(f)
+        writer.writerows(nodes)
+
+    return map_path
+
+
 def restart(timestamp):
     """
     Dumps data for the reachable nodes into a JSON file.
@@ -253,6 +277,9 @@ def restart(timestamp):
     height = dump(timestamp, nodes)
     REDIS_CONN.set('height', height)
     logging.info("Height: %d", height)
+
+    map_file = dump_node_map(timestamp)
+    logging.info("Dumped map into: %s", map_file)
 
 
 def cron():
