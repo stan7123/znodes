@@ -119,3 +119,6 @@ non_tls_connections = True
 cert_path = cert/cert.pem
 key_path = cert/key.pem
 key_pass =
+
+# Enable node map dump. Warning: Every file dump is more than 100MB gzipped
+node_map_dump = False

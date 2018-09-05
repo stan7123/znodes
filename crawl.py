@@ -31,6 +31,8 @@ Greenlets-based Bitcoin network crawler.
 from gevent import monkey
 monkey.patch_all()
 
+import gzip
+import shutil
 import csv
 import gevent
 import json
@@ -221,18 +223,24 @@ def dump_node_map(timestamp):
         (address, port) = key[9:].split("-", 2)
         node_data_ser = REDIS_CONN.get(key)
         peers = json.loads(node_data_ser)
-        peers_list = ['{}|{}'.format(
-            max((p['ipv4'], p['ipv6'], p['onion'])), p['port']) for p in peers]
-        peers_list.insert(0, '{}|{}'.format(address, port))
+        peers_list = ['{}|{}'.format(address, port)]
+        for p in peers:
+            addr = max((p['ipv4'], p['ipv6'], p['onion']))
+            n = '{}|{}'.format(addr, p['port'])
+            peers_list.append(n)
         nodes.append(peers_list)
 
     map_path = os.path.join(
-        SETTINGS['crawl_dir'], "map-{}.json".format(timestamp))
+        SETTINGS['crawl_dir'], "map-{}.csv".format(timestamp))
     with open(map_path, "w") as f:
         writer = csv.writer(f)
         writer.writerows(nodes)
+    map_path_gzip = map_path+'.gz'
+    with open(map_path, 'rb') as f_in, gzip.open(map_path_gzip, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
+    os.remove(map_path)
 
-    return map_path
+    return map_path_gzip
 
 
 def restart(timestamp):
@@ -278,8 +286,9 @@ def restart(timestamp):
     REDIS_CONN.set('height', height)
     logging.info("Height: %d", height)
 
-    map_file = dump_node_map(timestamp)
-    logging.info("Dumped map into: %s", map_file)
+    if SETTINGS['node_map_dump']:
+        map_file = dump_node_map(timestamp)
+        logging.info("Dumped map into: %s", map_file)
 
 
 def cron():
@@ -466,6 +475,7 @@ def init_settings(argv):
     SETTINGS['cert_path'] = conf.get('crawl', 'cert_path')
     SETTINGS['key_path'] = conf.get('crawl', 'key_path')
     SETTINGS['key_pass'] = conf.get('crawl', 'key_pass')
+    SETTINGS['node_map_dump'] = conf.getboolean('crawl', 'node_map_dump')
 
     SETTINGS['exclude_ipv4_networks'] = list_excluded_networks(
         conf.get('crawl', 'exclude_ipv4_networks'))
