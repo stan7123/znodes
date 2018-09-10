@@ -227,10 +227,10 @@ def dump_node_map(timestamp):
         (address, port) = key[9:].split("-", 2)
         node_data_ser = REDIS_CONN.get(key)
         peers = json.loads(node_data_ser)
-        peers_list = ['{}|{}'.format(address, port)]
+        peers_list = ['{}|{}|{}'.format(address, port, timestamp)]
         for p in peers:
             addr = max((p['ipv4'], p['ipv6'], p['onion']))
-            n = '{}|{}'.format(addr, p['port'])
+            n = '{}|{}|{}'.format(addr, p['port'], p['timestamp'])
             peers_list.append(n)
         nodes.append(peers_list)
 
