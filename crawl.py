@@ -106,12 +106,16 @@ def enumerate_node(redis_pipe, addr_msgs, now):
 
 def update_node_peers(address, port, redis_pipe, addr_msgs):
     """
-    Updates node map. So we can track given node's peers.
+    Updates node map. We select top SETTINGS['node_peers_max_count']
+    most recent known peers.
     """
+
+    limit = SETTINGS['node_peers_max_count']
     for addr_msg in addr_msgs:
         if 'addr_list' in addr_msg:
             map_key = "node-map:{}-{}".format(address, port)
-            redis_pipe.set(map_key, json.dumps(addr_msg['addr_list']))
+            s = sorted(addr_msg['addr_list'], key=lambda x: x['timestamp'], reverse=True)
+            redis_pipe.set(map_key, json.dumps(s[:limit]))
             return True
     return False
 
@@ -476,6 +480,7 @@ def init_settings(argv):
     SETTINGS['key_path'] = conf.get('crawl', 'key_path')
     SETTINGS['key_pass'] = conf.get('crawl', 'key_pass')
     SETTINGS['node_map_dump'] = conf.getboolean('crawl', 'node_map_dump')
+    SETTINGS['node_peers_max_count'] = conf.getint('crawl', 'node_peers_max_count')
 
     SETTINGS['exclude_ipv4_networks'] = list_excluded_networks(
         conf.get('crawl', 'exclude_ipv4_networks'))

@@ -11,7 +11,7 @@ app.config.update({
 redis_store = FlaskRedis(app)
 
 
-@app.route('/api/nodes/<string:ip>/<int:port>', methods=['GET'])
+@app.route('/api/nodes/<string:ip>/<int:port>/peers', methods=['GET'])
 def get_node_info(ip, port):
     map_key = "node-map:{}-{}".format(ip, port)
     node_data_serialized = redis_store.get(map_key)
