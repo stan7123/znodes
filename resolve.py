@@ -197,9 +197,9 @@ def raw_geoip(address):
         longitude = float(Decimal(geoip_record.location.longitude).quantize(prec))
         timezone = geoip_record.location.time_zone
 
-    asn_record = None
     if address.endswith(".onion"):
-        asn_record = "TOR Tor network"
+        asn = "TOR"
+        org = "Tor network"
     else:
         try:
             asn_record = ASN.asn(address)
@@ -207,9 +207,9 @@ def raw_geoip(address):
             logging.debug("Invalid address %s", address)
         except geoip2.errors.AddressNotFoundError as anfe:
             logging.debug("Could not find geoip record for %s", address)
-    if asn_record:
-        asn = asn_record.autonomous_system_number
-        org = asn_record.autonomous_system_organization
+        if asn_record:
+            asn = asn_record.autonomous_system_number
+            org = asn_record.autonomous_system_organization
 
     return city, country, latitude, longitude, timezone, asn, org
 
