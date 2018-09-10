@@ -35,7 +35,8 @@ import gevent
 import gevent.pool
 import logging
 import os
-import pygeoip
+import geoip2.database
+import geoip2.errors
 import redis
 import redis.connection
 import socket
@@ -54,10 +55,8 @@ REDIS_CONN = redis.StrictRedis(unix_socket_path=REDIS_SOCKET,
                                password=REDIS_PASSWORD)
 
 # MaxMind databases
-GEOIP4 = pygeoip.GeoIP("geoip/GeoLiteCity.dat", pygeoip.MEMORY_CACHE)
-GEOIP6 = pygeoip.GeoIP("geoip/GeoLiteCityv6.dat", pygeoip.MEMORY_CACHE)
-ASN4 = pygeoip.GeoIP("geoip/GeoIPASNum.dat", pygeoip.MEMORY_CACHE)
-ASN6 = pygeoip.GeoIP("geoip/GeoIPASNumv6.dat", pygeoip.MEMORY_CACHE)
+GEOIP = geoip2.database.Reader('geoip/GeoLite2-City.mmdb')
+ASN = geoip2.database.Reader('geoip/GeoLite2-ASN.mmdb')
 
 SETTINGS = {}
 
@@ -184,31 +183,35 @@ def raw_geoip(address):
     prec = Decimal('.000001')
     if address.endswith(".onion"):
         geoip_record = None
-    elif ":" in address:
-        geoip_record = GEOIP6.record_by_addr(address)
     else:
-        geoip_record = GEOIP4.record_by_addr(address)
+        try:
+            geoip_record = GEOIP.city(address)
+        except ValueError as ve:
+            logging.debug("Invalid address %s", address)
+        except geoip2.errors.AddressNotFoundError as anfe:
+            logging.debug("Could not find geoip record for %s", address)
     if geoip_record:
-        city = geoip_record['city']
-        country = geoip_record['country_code']
-        latitude = float(Decimal(geoip_record['latitude']).quantize(prec))
-        longitude = float(Decimal(geoip_record['longitude']).quantize(prec))
-        timezone = geoip_record['time_zone']
+        city = geoip_record.city.name
+        country = geoip_record.country.iso_code
+        latitude = float(Decimal(geoip_record.location.latitude).quantize(prec))
+        longitude = float(Decimal(geoip_record.location.longitude).quantize(prec))
+        timezone = geoip_record.location.time_zone
 
     asn_record = None
     if address.endswith(".onion"):
         asn_record = "TOR Tor network"
-    elif ":" in address:
-        asn_record = ASN6.org_by_addr(address)
     else:
-        asn_record = ASN4.org_by_addr(address)
+        try:
+            asn_record = ASN.asn(address)
+        except ValueError as ve:
+            logging.debug("Invalid address %s", address)
+        except geoip2.errors.AddressNotFoundError as anfe:
+            logging.debug("Could not find geoip record for %s", address)
     if asn_record:
-        data = asn_record.split(" ", 1)
-        asn = data[0]
-        if len(data) > 1:
-            org = data[1]
+        asn = asn_record.autonomous_system_number
+        org = asn_record.autonomous_system_organization
 
-    return (city, country, latitude, longitude, timezone, asn, org)
+    return city, country, latitude, longitude, timezone, asn, org
 
 
 def init_settings(argv):
