@@ -8,3 +8,6 @@ debug = False
 
 # Relative path to directory containing timestamp-prefixed JSON export files
 export_dir = data/export
+
+# Relative path to directory containing nodes aggregates JSON files
+export_aggr_dir = data/export_aggr

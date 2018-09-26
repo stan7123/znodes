@@ -35,6 +35,7 @@ import redis
 import sys
 import time
 from ConfigParser import ConfigParser
+from collections import defaultdict, Counter
 
 # Redis connection setup
 REDIS_SOCKET = os.environ.get('REDIS_SOCKET', "/tmp/redis.sock")
@@ -93,6 +94,49 @@ def export_nodes(nodes, timestamp):
     logging.info("Wrote %s", dump)
 
 
+def export_aggregates(nodes, timestamp):
+    """
+    Counts aggregates for visualization
+    """
+    data = {}
+    countries = Counter()
+    versions = Counter()
+    country_lat_lng = defaultdict(
+        lambda: defaultdict(
+            lambda: {'City': None, 'Count': 0, 'Latitude': 0, 'Longitude': 0}
+        )
+    )
+
+    start = time.time()
+    for node in nodes:
+        row = get_row(node)
+
+        city = row[8]
+        country = row[9]
+        zen_ver = row[3].strip('/')
+        lat = row[10]
+        lng = row[11]
+        lat_lng = '{}#{}'.format(lat, lng)
+
+        countries[country] += 1
+        versions[zen_ver] += 1
+        country_lat_lng[country][lat_lng]['City'] = city
+        country_lat_lng[country][lat_lng]['Count'] += 1
+        country_lat_lng[country][lat_lng]['Latitude'] = lat
+        country_lat_lng[country][lat_lng]['Longitude'] = lng
+
+    data['Countries'] = dict(countries)
+    data['Versions'] = dict(versions)
+    data['CountryLatLng'] = country_lat_lng
+
+    end = time.time()
+    elapsed = end - start
+    logging.info("Aggr elapsed: %d", elapsed)
+
+    dump = os.path.join(SETTINGS['export_aggr_dir'], "{}.json".format(timestamp))
+    open(dump, 'w').write(json.dumps(data, encoding="latin-1"))
+
+
 def init_settings(argv):
     """
     Populates SETTINGS with key-value pairs from configuration file.
@@ -104,6 +148,10 @@ def init_settings(argv):
     SETTINGS['export_dir'] = conf.get('export', 'export_dir')
     if not os.path.exists(SETTINGS['export_dir']):
         os.makedirs(SETTINGS['export_dir'])
+
+    SETTINGS['export_aggr_dir'] = conf.get('export', 'export_aggr_dir')
+    if not os.path.exists(SETTINGS['export_aggr_dir']):
+        os.makedirs(SETTINGS['export_aggr_dir'])
 
 
 def main(argv):
@@ -143,6 +191,7 @@ def main(argv):
             nodes = REDIS_CONN.smembers('opendata')
             logging.info("Nodes: %d", len(nodes))
             export_nodes(nodes, timestamp)
+            export_aggregates(nodes, timestamp)
             REDIS_CONN.publish('export', timestamp)
 
     return 0
