@@ -17,3 +17,5 @@ gzip -f -d GeoLiteCity.dat.gz
 gzip -f -d GeoLiteCityv6.dat.gz
 gzip -f -d GeoIPASNum.dat.gz
 gzip -f -d GeoIPASNumv6.dat.gz
+
+echo "Please manually download GeoLite2 City and GeoLite2 ASN db in mmdb format from https://dev.maxmind.com/geoip/geoip2/geolite2/"

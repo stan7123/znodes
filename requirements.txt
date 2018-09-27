@@ -5,3 +5,4 @@ pygeoip==0.3.2
 PySocks==1.5.7
 redis==2.10.5
 requests==2.11.0
+geoip2==2.9.0
