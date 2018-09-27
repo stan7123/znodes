@@ -31,6 +31,9 @@ Greenlets-based Bitcoin network crawler.
 from gevent import monkey
 monkey.patch_all()
 
+import gzip
+import shutil
+import csv
 import gevent
 import json
 import logging
@@ -101,6 +104,22 @@ def enumerate_node(redis_pipe, addr_msgs, now):
     return peers
 
 
+def update_node_peers(address, port, redis_pipe, addr_msgs):
+    """
+    Updates node map. We select top SETTINGS['node_peers_max_count']
+    most recent known peers.
+    """
+
+    limit = SETTINGS['node_peers_max_count']
+    for addr_msg in addr_msgs:
+        if 'addr_list' in addr_msg:
+            map_key = "node-map:{}-{}".format(address, port)
+            s = sorted(addr_msg['addr_list'], key=lambda x: x['timestamp'], reverse=True)
+            redis_pipe.set(map_key, json.dumps(s[:limit]))
+            return True
+    return False
+
+
 def connect(redis_conn, key):
     """
     Establishes connection with a node to:
@@ -166,6 +185,7 @@ def connect(redis_conn, key):
         peers = enumerate_node(redis_pipe, addr_msgs, now)
         logging.debug("%s Peers: %d", conn.to_addr, peers)
         redis_pipe.hset(key, 'state', "up")
+        update_node_peers(address, port, redis_pipe, addr_msgs)
     redis_pipe.execute()
 
 
@@ -196,6 +216,35 @@ def dump(timestamp, nodes):
     logging.info("Wrote %s", json_output)
 
     return Counter([node[-1] for node in json_data]).most_common(1)[0][0]
+
+
+def dump_node_map(timestamp):
+    """
+    Dumps node map (node to peers).
+    """
+    nodes = []
+    for key in get_keys(REDIS_CONN, 'node-map:*'):
+        (address, port) = key[9:].split("-", 2)
+        node_data_ser = REDIS_CONN.get(key)
+        peers = json.loads(node_data_ser)
+        peers_list = ['{}|{}|{}'.format(address, port, timestamp)]
+        for p in peers:
+            addr = max((p['ipv4'], p['ipv6'], p['onion']))
+            n = '{}|{}|{}'.format(addr, p['port'], p['timestamp'])
+            peers_list.append(n)
+        nodes.append(peers_list)
+
+    map_path = os.path.join(
+        SETTINGS['crawl_dir'], "map-{}.csv".format(timestamp))
+    with open(map_path, "w") as f:
+        writer = csv.writer(f)
+        writer.writerows(nodes)
+    map_path_gzip = map_path+'.gz'
+    with open(map_path, 'rb') as f_in, gzip.open(map_path_gzip, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
+    os.remove(map_path)
+
+    return map_path_gzip
 
 
 def restart(timestamp):
@@ -240,6 +289,10 @@ def restart(timestamp):
     height = dump(timestamp, nodes)
     REDIS_CONN.set('height', height)
     logging.info("Height: %d", height)
+
+    if SETTINGS['node_map_dump']:
+        map_file = dump_node_map(timestamp)
+        logging.info("Dumped map into: %s", map_file)
 
 
 def cron():
@@ -426,6 +479,8 @@ def init_settings(argv):
     SETTINGS['cert_path'] = conf.get('crawl', 'cert_path')
     SETTINGS['key_path'] = conf.get('crawl', 'key_path')
     SETTINGS['key_pass'] = conf.get('crawl', 'key_pass')
+    SETTINGS['node_map_dump'] = conf.getboolean('crawl', 'node_map_dump')
+    SETTINGS['node_peers_max_count'] = conf.getint('crawl', 'node_peers_max_count')
 
     SETTINGS['exclude_ipv4_networks'] = list_excluded_networks(
         conf.get('crawl', 'exclude_ipv4_networks'))
@@ -488,6 +543,8 @@ def main(argv):
         for key in get_keys(REDIS_CONN, 'node:*'):
             redis_pipe.delete(key)
         for key in get_keys(REDIS_CONN, 'crawl:cidr:*'):
+            redis_pipe.delete(key)
+        for key in get_keys(REDIS_CONN, 'node-map:*'):
             redis_pipe.delete(key)
         redis_pipe.delete('pending')
         redis_pipe.execute()
