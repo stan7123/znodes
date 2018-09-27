@@ -114,7 +114,7 @@ def export_aggregates(nodes, timestamp):
 
         city = row[8]
         try:
-            c = pycountry.countries.get(alpha_2=row[8])
+            c = pycountry.countries.get(alpha_2=row[9])
             country = c.name
         except KeyError as ke:
             country = 'TOR Node/Unknown'
