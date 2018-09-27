@@ -203,13 +203,13 @@ def raw_geoip(address):
     else:
         try:
             asn_record = ASN.asn(address)
+            if asn_record:
+                asn = asn_record.autonomous_system_number
+                org = asn_record.autonomous_system_organization
         except ValueError as ve:
             logging.debug("Invalid address %s", address)
         except geoip2.errors.AddressNotFoundError as anfe:
             logging.debug("Could not find geoip record for %s", address)
-        if asn_record:
-            asn = asn_record.autonomous_system_number
-            org = asn_record.autonomous_system_organization
 
     return city, country, latitude, longitude, timezone, asn, org
 
