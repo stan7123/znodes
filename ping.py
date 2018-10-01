@@ -84,7 +84,8 @@ class Keepalive(object):
         version = self.version_msg.get('version', "")
         user_agent = self.version_msg.get('user_agent', "")
         services = self.version_msg.get('services', "")
-        data = self.node + (version, user_agent, self.last_ping, services)
+        data = self.node + (version, user_agent, self.last_ping, services,
+                            self.conn.is_ssl())
 
         REDIS_CONN.sadd('opendata', data)
 

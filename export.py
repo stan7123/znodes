@@ -51,11 +51,11 @@ def get_row(node):
     """
     Returns enumerated row data from Redis for the specified node.
     """
-    # address, port, version, user_agent, timestamp, services
+    # address, port, version, user_agent, timestamp, services, is_ssl
     node = eval(node)
     address = node[0]
     port = node[1]
-    services = node[-1]
+    services = node[-2]
 
     height = REDIS_CONN.get('height:{}-{}-{}'.format(address, port, services))
     if height is None:
@@ -97,7 +97,7 @@ def export_nodes(nodes, timestamp):
 
 def export_aggregates(nodes, timestamp):
     """
-    Counts aggregates for visualization
+    Counts aggregates for visualization and exports as JSON
     """
     data = {}
     countries = Counter()
@@ -112,16 +112,16 @@ def export_aggregates(nodes, timestamp):
     for node in nodes:
         row = get_row(node)
 
-        city = row[8]
+        city = row[9]
         try:
-            c = pycountry.countries.get(alpha_2=row[9])
+            c = pycountry.countries.get(alpha_2=row[10])
             country = c.name
         except KeyError as ke:
             country = 'TOR Node/Unknown'
 
         zen_ver = row[3].strip('/')
-        lat = row[10]
-        lng = row[11]
+        lat = row[11]
+        lng = row[12]
         lat_lng = '{}#{}'.format(lat, lng)
 
         countries[country] += 1
