@@ -11,3 +11,6 @@ export_dir = data/export
 
 # Relative path to directory containing nodes aggregates JSON files
 export_aggr_dir = data/export_aggr
+
+# How many connections should be returned per location in aggregates export
+export_aggr_peers_max_count = 10

@@ -76,6 +76,36 @@ def get_row(node):
     return node + height + hostname + geoip
 
 
+def get_peers(addr, port):
+    """
+    Returns limited list of peers for specified node
+    """
+    peers = []
+    peer_limit = SETTINGS['export_aggr_peers_max_count']
+
+    map_key = "node-map:{}-{}".format(addr, port)
+    node_data_serialized = REDIS_CONN.get(map_key)
+    if node_data_serialized is None:
+        return []
+    node_data = json.loads(node_data_serialized)
+    for peer in node_data:
+        address = peer['ipv4'] or peer['ipv6'] or peer['onion']
+        if not address:
+            continue
+        geoip = REDIS_CONN.hget('resolve:{}'.format(address), 'geoip')
+        geoip = (None, None, 0.0, 0.0, None, None, None) if geoip is None else eval(geoip)
+        if geoip[0] is not None:
+            peers.append({
+                'City': geoip[0],
+                'Latitude': geoip[2],
+                'Longitude': geoip[3]
+            })
+        if len(peers) >= peer_limit:
+            break
+
+    return peers
+
+
 def export_nodes(nodes, timestamp):
     """
     Merges enumerated data for the specified nodes and exports them into
@@ -104,13 +134,22 @@ def export_aggregates(nodes, timestamp):
     versions = Counter()
     country_lat_lng = defaultdict(
         lambda: defaultdict(
-            lambda: {'City': None, 'Count': 0, 'Latitude': 0, 'Longitude': 0}
+            lambda: {'City': None, 'Count': 0, 'Latitude': 0, 'Longitude': 0,
+                     'Connections': []}
         )
     )
 
     start = time.time()
+    ips = {}
     for node in nodes:
         row = get_row(node)
+
+        # Filtering out same IP addresses
+        addr = row[0]
+        port = row[1]
+        if addr in ips:
+            continue
+        ips[addr] = 1
 
         city = row[9]
         try:
@@ -123,6 +162,12 @@ def export_aggregates(nodes, timestamp):
         lat = row[11]
         lng = row[12]
         lat_lng = '{}#{}'.format(lat, lng)
+
+        # Do this only once per location
+        if not country_lat_lng[country][lat_lng]['Connections']:
+            peers = get_peers(addr, port)
+            if peers:
+                country_lat_lng[country][lat_lng]['Connections'] = peers
 
         countries[country] += 1
         versions[zen_ver] += 1
@@ -158,6 +203,9 @@ def init_settings(argv):
     SETTINGS['export_aggr_dir'] = conf.get('export', 'export_aggr_dir')
     if not os.path.exists(SETTINGS['export_aggr_dir']):
         os.makedirs(SETTINGS['export_aggr_dir'])
+
+    SETTINGS['export_aggr_peers_max_count'] = conf.getint(
+        'export', 'export_aggr_peers_max_count')
 
 
 def main(argv):

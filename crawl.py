@@ -99,6 +99,7 @@ def enumerate_node(redis_pipe, addr_msgs, now):
                         logging.debug("Exclude: %s", address)
                         continue
                     redis_pipe.sadd('pending', (address, port, services))
+                    redis_pipe.sadd('toresolve', address)
                     peers += 1
 
     return peers
@@ -547,6 +548,7 @@ def main(argv):
         for key in get_keys(REDIS_CONN, 'node-map:*'):
             redis_pipe.delete(key)
         redis_pipe.delete('pending')
+        redis_pipe.delete('toresolve')
         redis_pipe.execute()
         set_pending()
         update_excluded_networks()
