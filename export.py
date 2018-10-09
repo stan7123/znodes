@@ -80,7 +80,8 @@ def get_peers(addr, port, node_lat, node_lng):
     """
     Returns limited list of peers for specified node, excluding peers from same location
     """
-    peers = []
+
+    peers = {}
     peer_limit = SETTINGS['export_aggr_peers_max_count']
 
     map_key = "node-map:{}-{}".format(addr, port)
@@ -93,20 +94,20 @@ def get_peers(addr, port, node_lat, node_lng):
         if not address:
             continue
         geoip = REDIS_CONN.hget('resolve:{}'.format(address), 'geoip')
-        geoip = (None, None, 0.0, 0.0, None, None, None) if geoip is None else eval(geoip)
+        if geoip is None:
+            continue
+        geoip = eval(geoip)
+        city = geoip[0]
         lat = geoip[2]
         lng = geoip[3]
         different_location = lat != node_lat or lng != node_lng
-        if geoip[0] is not None and different_location:
-            peers.append({
-                'City': geoip[0],
-                'Latitude': lat,
-                'Longitude': lng
-            })
+        peer_key = '{}|{}|{}'.format(city, lat, lng)
+        if city is not None and different_location and peer_key not in peers:
+            peers[peer_key] = {'City': city, 'Latitude': lat, 'Longitude': lng}
         if len(peers) >= peer_limit:
             break
 
-    return peers
+    return list(peers.values())
 
 
 def export_nodes(nodes, timestamp):
