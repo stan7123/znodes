@@ -340,7 +340,12 @@ def get_nodes(path):
     Returns all reachable nodes from a JSON file.
     """
     nodes = []
-    text = open(path, 'r').read()
+    try:
+        text = open(path, 'r').read()
+    except Exception as e:
+        logging.warning(e)
+        return []
+
     try:
         nodes = json.loads(text)
     except ValueError as err:

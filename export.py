@@ -76,9 +76,9 @@ def get_row(node):
     return node + height + hostname + geoip
 
 
-def get_peers(addr, port):
+def get_peers(addr, port, node_lat, node_lng):
     """
-    Returns limited list of peers for specified node
+    Returns limited list of peers for specified node, excluding peers from same location
     """
     peers = []
     peer_limit = SETTINGS['export_aggr_peers_max_count']
@@ -94,11 +94,14 @@ def get_peers(addr, port):
             continue
         geoip = REDIS_CONN.hget('resolve:{}'.format(address), 'geoip')
         geoip = (None, None, 0.0, 0.0, None, None, None) if geoip is None else eval(geoip)
-        if geoip[0] is not None:
+        lat = geoip[2]
+        lng = geoip[3]
+        different_location = lat != node_lat or lng != node_lng
+        if geoip[0] is not None and different_location:
             peers.append({
                 'City': geoip[0],
-                'Latitude': geoip[2],
-                'Longitude': geoip[3]
+                'Latitude': lat,
+                'Longitude': lng
             })
         if len(peers) >= peer_limit:
             break
@@ -165,7 +168,7 @@ def export_aggregates(nodes, timestamp):
 
         # Do this only once per location
         if not country_lat_lng[country][lat_lng]['Connections']:
-            peers = get_peers(addr, port)
+            peers = get_peers(addr, port, lat, lng)
             if peers:
                 country_lat_lng[country][lat_lng]['Connections'] = peers
 
