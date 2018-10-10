@@ -101,7 +101,7 @@ def get_peers(addr, port, node_lat, node_lng):
         lat = geoip[2]
         lng = geoip[3]
         different_location = lat != node_lat or lng != node_lng
-        peer_key = '{}|{}|{}'.format(city, lat, lng)
+        peer_key = '{}|{}'.format(lat, lng)
         if city is not None and different_location and peer_key not in peers:
             peers[peer_key] = {'City': city, 'Latitude': lat, 'Longitude': lng}
         if len(peers) >= peer_limit:
