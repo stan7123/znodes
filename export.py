@@ -136,6 +136,7 @@ def export_aggregates(nodes, timestamp):
     data = {}
     countries = Counter()
     versions = Counter()
+    tls = Counter()
     country_lat_lng = defaultdict(
         lambda: defaultdict(
             lambda: {'City': None, 'Count': 0, 'Latitude': 0, 'Longitude': 0,
@@ -161,7 +162,8 @@ def export_aggregates(nodes, timestamp):
             country = c.name
         except KeyError as ke:
             country = 'TOR Node/Unknown'
-
+        
+        is_tls = 'tls' if row[6] else 'non-tls'
         zen_ver = row[3].strip('/')
         lat = row[11]
         lng = row[12]
@@ -175,6 +177,7 @@ def export_aggregates(nodes, timestamp):
 
         countries[country] += 1
         versions[zen_ver] += 1
+        tls[is_tls] += 1
         country_lat_lng[country][lat_lng]['City'] = city
         country_lat_lng[country][lat_lng]['Count'] += 1
         country_lat_lng[country][lat_lng]['Latitude'] = lat
@@ -182,7 +185,8 @@ def export_aggregates(nodes, timestamp):
 
     data['Countries'] = dict(countries)
     data['Versions'] = dict(versions)
-    data['CountryLatLng'] = country_lat_lng
+    data['TLS'] = dict(tls)
+    data['CountryLatLng'] = country_lat_lng    
 
     end = time.time()
     elapsed = end - start
